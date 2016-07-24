@@ -1,13 +1,33 @@
+ifeq ($(OS),Windows_NT)
+# Make
+MAKE = mingw32-make.exe
+# Assembler
+AS = nasm.exe
+# use this command to erase files.
+RM = -del /Q
+# Create build dir
+MKDIR = md
+else
+# Make
+MAKE = make
+# Assembler
+AS = nasm
+# use this command to erase files.
+RM = rm -rf
+# Create build dir
+MKDIR = mkdir -p
+endif
+
 ####################################################################################################
 # Makefile to build XTIDE Universal BIOS.                                                          #
 #                                                                                                  #
 # Valid makefile targets are:                                                                      #
-# all       Removes existing files and builds binary files in \Build                               #
+# all       Removes existing files and builds binary files in /Build                               #
 # small     Builds 8 kiB binaries only (without checksum)                                          #
 # large     Builds 12 kiB binaries only (without checksum)                                         #
-# clean     Removes all files from \Build                                                          #
+# clean     Removes all files from /Build                                                          #
 # checksum* Builds all and then generates checksum byte to all binary files                        #
-# strings*  Compress src\Strings.asm to src\StringsCompressed.asm                                  #
+# strings*  Compress src/Strings.asm to src/StringsCompressed.asm                                  #
 # unused*   Checks if there are any unused functions that can be removed to save space             #
 #                                                                                                  #
 # * at the end of target name means that Perl is required for the job.                             #
@@ -147,20 +167,6 @@ IHEADERS = $(HEADERS:%=-I%)
 # Path + target file to be built
 TARGET = $(BUILD_DIR)/$(PROG)
 
-#########################
-# Compilers and linkers #
-#########################
-
-# Make
-MAKE = mingw32-make.exe
-
-# Assembler
-AS = nasm.exe
-
-# use this command to erase files.
-RM = -del /Q
-
-
 #############################
 # Compiler and linker flags #
 #############################
@@ -176,8 +182,11 @@ ASFLAGS += -Ox					# Optimize operands to their shortest forms
 # Build process. Actual work is done here. #
 ############################################
 
-all: clean small large
+all: clean build_dir small large checksum
 	@echo All done!
+
+build_dir:
+	mkdir $(BUILD_DIR)
 
 small: xt_tiny xt xtplus at 386_8k
 	@echo All small binaries built!
@@ -217,45 +226,45 @@ xt_tiny:
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_386_8K) -l"$(TARGET)_386.lst" -o"$(TARGET)_386.bin"
 	@echo * Small 386 version "$(TARGET)_386.bin" built.
 
-strings: src\Strings.asm
-	@$(AS) src\Strings.asm $(ASFLAGS) $(DEFS_AT_LARGE) -DCHECK_FOR_UNUSED_ENTRYPOINTS -DMODULE_STRINGS_COMPRESSED_PRECOMPRESS -o build\Strings.bin -l build\StringsPrecompress.lst
-	@perl ..\tools\StringsCompress.pl < build\StringsPrecompress.lst > src\StringsCompressed.asm
+strings: src/Strings.asm
+	@$(AS) src/Strings.asm $(ASFLAGS) $(DEFS_AT_LARGE) -DCHECK_FOR_UNUSED_ENTRYPOINTS -DMODULE_STRINGS_COMPRESSED_PRECOMPRESS -o build/Strings.bin -l build/StringsPrecompress.lst
+	@perl ../tools/StringsCompress.pl < build/StringsPrecompress.lst > src/StringsCompressed.asm
 	@echo StringsCompressed.asm updated!
 
 clean:
-	@$(RM) $(BUILD_DIR)\*.*
+	@$(RM) $(BUILD_DIR)
 	@echo Deleted "(*.*)" from "$(BUILD_DIR)/"
 
-checksum: all
-	@perl ..\tools\checksum.pl $(TARGET)_tiny.bin $(ROMSIZE)
-	@perl ..\tools\checksum.pl $(TARGET)_xt.bin $(ROMSIZE)
-	@perl ..\tools\checksum.pl $(TARGET)_xtp.bin $(ROMSIZE)
-	@perl ..\tools\checksum.pl $(TARGET)_at.bin $(ROMSIZE)
-	@perl ..\tools\checksum.pl $(TARGET)_xtl.bin $(ROMSIZE_LARGE)
-	@perl ..\tools\checksum.pl $(TARGET)_xtpl.bin $(ROMSIZE_LARGE)
-	@perl ..\tools\checksum.pl $(TARGET)_atl.bin $(ROMSIZE_LARGE)
-	@perl ..\tools\checksum.pl $(TARGET)_386.bin $(ROMSIZE)
+checksum: small large
+	@perl ../tools/checksum.pl $(TARGET)_tiny.bin $(ROMSIZE)
+	@perl ../tools/checksum.pl $(TARGET)_xt.bin $(ROMSIZE)
+	@perl ../tools/checksum.pl $(TARGET)_xtp.bin $(ROMSIZE)
+	@perl ../tools/checksum.pl $(TARGET)_at.bin $(ROMSIZE)
+	@perl ../tools/checksum.pl $(TARGET)_xtl.bin $(ROMSIZE_LARGE)
+	@perl ../tools/checksum.pl $(TARGET)_xtpl.bin $(ROMSIZE_LARGE)
+	@perl ../tools/checksum.pl $(TARGET)_atl.bin $(ROMSIZE_LARGE)
+	@perl ../tools/checksum.pl $(TARGET)_386.bin $(ROMSIZE)
 
 unused:
 	@echo "All Features"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_ALL_FEATURES) $(DEFS_XT) $(DEFS_XT_PLUS) $(DEFS_AT) $(DEFS_XT_LARGE) $(DEFS_XTPLUS_LARGE) $(DEFS_AT_LARGE) $(DEFS_XT_TINY) $(DEFS_386_8K) -o"$(TARGET)_unused.asm" -l"$(TARGET)_unused.lst"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_ALL_FEATURES) $(DEFS_XT) $(DEFS_XT_PLUS) $(DEFS_AT) $(DEFS_XT_LARGE) $(DEFS_XTPLUS_LARGE) $(DEFS_AT_LARGE) $(DEFS_XT_TINY) $(DEFS_386_8K) -o"$(TARGET)_unused.asm" -E -DCHECK_FOR_UNUSED_ENTRYPOINTS
-	@perl ..\tools\unused.pl $(TARGET)_unused.lst $(TARGET)_unused.asm
+	@perl ../tools/unused.pl $(TARGET)_unused.lst $(TARGET)_unused.asm
 	@echo "XT Small"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_XT) -o"$(TARGET)_unused_xt.asm" -l"$(TARGET)_unused_xt.lst"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_XT) -o"$(TARGET)_unused_xt.asm" -E -DCHECK_FOR_UNUSED_ENTRYPOINTS
-	@perl ..\tools\unused.pl $(TARGET)_unused_xt.lst $(TARGET)_unused_xt.asm
+	@perl ../tools/unused.pl $(TARGET)_unused_xt.lst $(TARGET)_unused_xt.asm
 	@echo "XT Large"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_XT_LARGE) -o"$(TARGET)_unused_xtl.asm" -l"$(TARGET)_unused_xtl.lst"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_XT_LARGE) -o"$(TARGET)_unused_xtl.asm" -E -DCHECK_FOR_UNUSED_ENTRYPOINTS
-	@perl ..\tools\unused.pl $(TARGET)_unused_xtl.lst $(TARGET)_unused_xtl.asm
+	@perl ../tools/unused.pl $(TARGET)_unused_xtl.lst $(TARGET)_unused_xtl.asm
 	@echo "AT Small"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT) -o"$(TARGET)_unused_at.asm" -l"$(TARGET)_unused_at.lst"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT) -o"$(TARGET)_unused_at.asm" -E -DCHECK_FOR_UNUSED_ENTRYPOINTS
-	@perl ..\tools\unused.pl $(TARGET)_unused_at.lst $(TARGET)_unused_at.asm
+	@perl ../tools/unused.pl $(TARGET)_unused_at.lst $(TARGET)_unused_at.asm
 	@echo "AT Large"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT_LARGE) -o"$(TARGET)_unused_atl.asm" -l"$(TARGET)_unused_atl.lst"
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT_LARGE) -o"$(TARGET)_unused_atl.asm" -E -DCHECK_FOR_UNUSED_ENTRYPOINTS
-	@perl ..\tools\unused.pl $(TARGET)_unused_atl.lst $(TARGET)_unused_atl.asm
+	@perl ../tools/unused.pl $(TARGET)_unused_atl.lst $(TARGET)_unused_atl.asm
 
 

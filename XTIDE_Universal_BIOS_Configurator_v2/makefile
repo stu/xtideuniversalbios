@@ -1,3 +1,24 @@
+ifeq ($(OS),Windows_NT)
+# Make
+MAKE = mingw32-make.exe
+# Assembler
+AS = nasm.exe
+# use this command to erase files.
+RM = -del /Q
+# Create build dir
+MKDIR = md
+else
+# Make
+MAKE = make
+# Assembler
+AS = nasm
+# use this command to erase files.
+RM = rm -rf
+# Create build dir
+MKDIR = mkdir -p
+endif
+
+
 ###############################################################################
 # Makefile to build XTIDE Universal BIOS Configurator v2.                     #
 #                                                                             #
@@ -75,21 +96,6 @@ IHEADERS = $(HEADERS:%=-I%)
 # Path + target file to be built
 TARGET = $(BUILD_DIR)/$(PROG)
 
-
-#########################
-# Compilers and linkers #
-#########################
-
-# Make
-MAKE = mingw32-make.exe
-
-# Assembler
-AS = nasm.exe
-
-# use this command to erase files.
-RM = -del /Q
-
-
 #############################
 # Compiler and linker flags #
 #############################
@@ -108,9 +114,13 @@ ASFLAGS += -O9					# Optimize operands to their shortest forms
 
 .PHONY: all at xtplus xt clean release
 
-all: clean release
+all: clean build_dir release
 	@echo All done!
 
+
+build_dir:
+	mkdir $(BUILD_DIR)
+	
 at:
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT) -l"$(TARGET)_at.lst" -o"$(TARGET)_at.$(EXTENSION)"
 	@echo AT version "$(TARGET)_at.$(EXTENSION)" built.

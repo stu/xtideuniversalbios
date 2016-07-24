@@ -1,3 +1,24 @@
+ifeq ($(OS),Windows_NT)
+# Make
+MAKE = mingw32-make.exe
+# Assembler
+AS = nasm.exe
+# use this command to erase files.
+RM = -del /Q
+# Create build dir
+MKDIR = md
+else
+# Make
+MAKE = make
+# Assembler
+AS = nasm
+# use this command to erase files.
+RM = rm -rf
+# Create build dir
+MKDIR = mkdir -p
+endif
+
+
 ###############################################################################
 # Makefile to build BIOS Drive Information Tool.                              #
 #                                                                             #
@@ -74,20 +95,6 @@ IHEADERS = $(HEADERS:%=-I%)
 TARGET = $(BUILD_DIR)/$(PROG)
 
 
-#########################
-# Compilers and linkers #
-#########################
-
-# Make
-MAKE = mingw32-make.exe
-
-# Assembler
-AS = nasm.exe
-
-# use this command to erase files.
-RM = -del /Q
-
-
 #############################
 # Compiler and linker flags #
 #############################
@@ -106,9 +113,12 @@ ASFLAGS += -O9					# Optimize operands to their shortest forms
 
 .PHONY: all at xtplus xt clean release
 
-all: clean xt
+all: clean build_dir xt
 	@echo All done!
-
+	
+build_dir:
+	mkdir $(BUILD_DIR)
+	
 at:
 	@$(AS) "$(SRC_ASM)" $(ASFLAGS) $(DEFS_AT) -l"$(TARGET)_at.lst" -o"$(TARGET)_at.$(EXTENSION)"
 	@echo AT version "$(TARGET)_at.$(EXTENSION)" built.
@@ -122,7 +132,7 @@ xt:
 	@echo XT version "$(TARGET).$(EXTENSION)" built.
 
 clean:
-	@$(RM) $(BUILD_DIR)\*.*
+	@$(RM) $(BUILD_DIR)
 	@echo Deleted "(*.*)" from "$(BUILD_DIR)/"
 
 release: xt

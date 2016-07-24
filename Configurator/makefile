@@ -1,3 +1,23 @@
+ifeq ($(OS),Windows_NT)
+# Make
+MAKE = mingw32-make.exe
+# Assembler
+AS = nasm.exe
+# use this command to erase files.
+RM = -del /Q
+# Create build dir
+MKDIR = md
+else
+# Make
+MAKE = make
+# Assembler
+AS = nasm
+# use this command to erase files.
+RM = rm -rf
+# Create build dir
+MKDIR = mkdir -p
+endif
+
 ###############################################################################
 # Generic makefile for building Assembly binary file.                         #
 # v. 1.0.0 (28.7.2007 ... 28.7.2007)                                          #
@@ -18,7 +38,7 @@
 ###########################################
 
 # Assembly source code file (*.asm):
-SRC_ASM = Src\Main.asm
+SRC_ASM = Src/Main.asm
 
 # Program executable file name without extension:
 PROG = idecfg
@@ -59,21 +79,7 @@ IHEADERS = $(HEADERS:%=-I%)
 IHEADERS += -I.
 
 # Path + target file to be built
-TARGET = $(BUILD_DIR)\$(PROG).com
-
-
-#########################
-# Compilers and linkers #
-#########################
-
-# Make
-MAKE = mingw32-make.exe
-
-# Assembler
-AS = nasm.exe
-
-# use this command to erase files.
-RM = -del /Q
+TARGET = $(BUILD_DIR)/$(PROG).com
 
 
 #############################
@@ -97,17 +103,21 @@ ASFLAGS += -O9					# Optimize operands to their shortest forms
 # Make clean debug and release versions
 all:
 	@$(MAKE) clean
+	@$(MAKE) build_dir
 	@$(MAKE) build
 	@echo All done!
 
+build_dir:
+	mkdir $(BUILD_DIR)
+	
 # Clean
 clean:
-	@$(RM) $(BUILD_DIR)\*.*
-	@echo Deleted "(*.*)" from "$(BUILD_DIR)\"
+	@echo Deleted "(*.*)" from "$(BUILD_DIR)/"
+	@$(RM) $(BUILD_DIR)
 
 # Build
 build:
-	@$(AS) "$(SRC_ASM)" $(ASFLAGS) -l"$(BUILD_DIR)\$(PROG).lst" -o"$(TARGET)"
+	@$(AS) "$(SRC_ASM)" $(ASFLAGS) -l"$(BUILD_DIR)/$(PROG).lst" -o"$(TARGET)"
 	@echo "$(TARGET)" built.
 
 release: build
